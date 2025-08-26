@@ -4,14 +4,14 @@ import SwiftData
 struct BehaviorsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: [SortDescriptor(\Behavior.category), SortDescriptor(\Behavior.name)]) private var behaviors: [Behavior]
+    @Query(sort: \Behavior.name) private var behaviors: [Behavior]
     
     @State private var showingAddBehavior = false
     
     private var groupedBehaviors: [(BehaviorCategory, [Behavior])] {
         Dictionary(grouping: behaviors, by: { $0.category })
             .sorted { $0.key.rawValue < $1.key.rawValue }
-            .map { ($0.key, $0.value.sorted { $0.name < $1.name }) }
+            .map { ($0.key, $0.value) }
     }
     
     var body: some View {
@@ -97,6 +97,8 @@ struct AddBehaviorSheet: View {
     @State private var isNegative = false
     @State private var category: BehaviorCategory = .listening
     
+    let availableEmojis = ["⭐", "🎯", "🏆", "💎", "🎨", "🎭", "🎪", "🎸", "🎹", "🎮", "🧩", "🎲", "🏀", "⚽", "🏈", "🎾", "🥋", "🏹", "🎣", "🛹"]
+    
     var body: some View {
         NavigationStack {
             Form {
@@ -116,34 +118,34 @@ struct AddBehaviorSheet: View {
                         Button(action: { isNegative.toggle() }) {
                             Image(systemName: isNegative ? "minus.circle.fill" : "plus.circle.fill")
                                 .foregroundColor(isNegative ? .red : .green)
-                                .font(.title2)
                         }
                         
                         TextField("1", value: $points, format: .number)
                             .textFieldStyle(.roundedBorder)
-                            .frame(width: 80)
+                            .frame(width: 60)
                             .multilineTextAlignment(.trailing)
-                            .keyboardType(.numberPad)
                     }
                 }
                 
                 Section("Icon") {
-                    HStack {
-                        Text("Emoji")
-                        Spacer()
-                        EmojiTextField(text: $emoji)
-                            .frame(width: 60, height: 60)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(category.color.opacity(0.1))
-                            )
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 50))], spacing: 12) {
+                        ForEach(availableEmojis, id: \.self) { icon in
+                            Button(action: { emoji = icon }) {
+                                Text(icon)
+                                    .font(.system(size: 30))
+                                    .frame(width: 50, height: 50)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(emoji == icon ? category.color.opacity(0.2) : Color.gray.opacity(0.1))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .stroke(emoji == icon ? category.color : Color.clear, lineWidth: 2)
+                                            )
+                                    )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
                     }
-                }
-                
-                Section {
-                    Text("Tip: Tap the emoji field to open the emoji keyboard and select any emoji you want!")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
                 }
             }
             .navigationTitle("Add Behavior")
@@ -158,7 +160,7 @@ struct AddBehaviorSheet: View {
                         addBehavior()
                     }
                     .fontWeight(.semibold)
-                    .disabled(name.isEmpty || points == 0 || emoji.isEmpty)
+                    .disabled(name.isEmpty || points == 0)
                 }
             }
         }
@@ -168,8 +170,8 @@ struct AddBehaviorSheet: View {
         let behavior = Behavior(
             name: name,
             category: category,
-            emoji: String(emoji.prefix(1)), // Ensure only one emoji
-            points: isNegative ? -abs(points) : abs(points),
+            emoji: emoji,
+            points: isNegative ? -points : points,
             isBuiltin: false
         )
         modelContext.insert(behavior)
