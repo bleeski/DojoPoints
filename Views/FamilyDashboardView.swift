@@ -309,37 +309,21 @@ struct AddChildSheet: View {
     @State private var goalPoints = 50
     @State private var goalReward = ""
     
-    let availableEmojis = ["👧", "👦", "🧒", "👶", "👨", "👩", "🧑", "👴", "👵", "🦸", "🦹", "🧙", "🧚", "🧛", "🧜", "🧝", "🤴", "👸", "🎅", "🤶"]
-    
     var body: some View {
         NavigationStack {
             Form {
                 Section("Child Info") {
                     TextField("Name", text: $name)
                     
-                    VStack(alignment: .leading) {
+                    HStack {
                         Text("Avatar")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 50))], spacing: 12) {
-                            ForEach(availableEmojis, id: \.self) { emoji in
-                                Button(action: { selectedEmoji = emoji }) {
-                                    Text(emoji)
-                                        .font(.system(size: 30))
-                                        .frame(width: 50, height: 50)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .fill(selectedEmoji == emoji ? Color.blue.opacity(0.2) : Color.gray.opacity(0.1))
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 8)
-                                                        .stroke(selectedEmoji == emoji ? Color.blue : Color.clear, lineWidth: 2)
-                                                )
-                                        )
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                            }
-                        }
+                        Spacer()
+                        EmojiTextField(text: $selectedEmoji)
+                            .frame(width: 60, height: 60)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.blue.opacity(0.1))
+                            )
                     }
                 }
                 
@@ -368,7 +352,7 @@ struct AddChildSheet: View {
                         addChild()
                     }
                     .fontWeight(.semibold)
-                    .disabled(name.isEmpty)
+                    .disabled(name.isEmpty || selectedEmoji.isEmpty)
                 }
             }
         }
@@ -377,12 +361,34 @@ struct AddChildSheet: View {
     private func addChild() {
         let child = Child(
             name: name,
-            emojiAvatar: selectedEmoji,
+            emojiAvatar: String(selectedEmoji.prefix(1)), // Ensure only one emoji
             goalPoints: goalPoints,
             goalReward: goalReward
         )
         modelContext.insert(child)
         try? modelContext.save()
         dismiss()
+    }
+}
+
+// MARK: - Emoji Text Field
+struct EmojiTextField: View {
+    @Binding var text: String
+    @State private var isEditing = false
+    
+    var body: some View {
+        TextField("", text: $text)
+            .font(.system(size: 40))
+            .multilineTextAlignment(.center)
+            .onChange(of: text) { oldValue, newValue in
+                // Keep only the first emoji
+                if newValue.count > 1 {
+                    text = String(newValue.prefix(1))
+                }
+                // Ensure it's an emoji
+                if !newValue.isEmpty && !newValue.unicodeScalars.first!.properties.isEmoji {
+                    text = oldValue
+                }
+            }
     }
 }

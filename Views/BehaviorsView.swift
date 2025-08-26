@@ -4,7 +4,7 @@ import SwiftData
 struct BehaviorsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Behavior.category) private var behaviors: [Behavior]
+    @Query(sort: \Behavior.name) private var behaviors: [Behavior]
     
     @State private var showingAddBehavior = false
     
